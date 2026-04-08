@@ -30,6 +30,12 @@ struct TransactionListView: View {
             }
             .navigationTitle("Transactions")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    NavigationLink(destination: ExpenseSharingView()) {
+                        Image(systemName: "person.3.sequence")
+                            .imageScale(.large)
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showingAddTransaction = true

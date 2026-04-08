@@ -3,9 +3,9 @@ import FirebaseAuth
 
 /// Fetches committees for the current user via backend API using Firebase ID token (same secure flow as Android).
 enum CommitteeApi {
-    /// Replace with your backend base URL. For simulator: http://localhost:8000/api
-    /// For device use your machine IP e.g. http://192.168.1.x:8000/api
-    static let baseURL = "http://localhost:8000/api"
+    /// Production API (same base as Android `BuildConfig.API_BASE_URL`). No trailing slash (paths append with "/…").
+    /// For local Node: `http://localhost:8000/api` or simulator `http://127.0.0.1:8000/api`.
+    static let baseURL = "https://treasuremoney.in/api"
     
     static func fetchMemberCommittees() async throws -> [Committee] {
         guard let user = Auth.auth().currentUser else {
