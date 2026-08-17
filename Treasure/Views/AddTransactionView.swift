@@ -5,7 +5,9 @@ struct AddTransactionView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var transactionVM: TransactionViewModel
     @EnvironmentObject private var categoryVM: CategoryViewModel
-    
+
+    var editingTransaction: Transaction? = nil
+
     @State private var amount = ""
     @State private var remark = ""
     @State private var date = Date()
@@ -14,6 +16,8 @@ struct AddTransactionView: View {
     @State private var showingCategoryPicker = false
     @State private var error: String?
     @State private var isLoading = false
+    @State private var didPrefill = false
+    @ObservedObject private var currencyStore = CurrencyStore.shared
     
     var body: some View {
         NavigationView {
@@ -36,7 +40,7 @@ struct AddTransactionView: View {
                             }
                             
                             HStack {
-                                Text("₹")
+                                Text(currencyStore.symbol)
                                     .font(.system(size: 48, weight: .bold))
                                     .foregroundColor(isExpense ? .red : .green)
                                 TextField("0.00", text: $amount)
@@ -115,7 +119,7 @@ struct AddTransactionView: View {
                     .padding()
                 }
             }
-            .navigationTitle("Add Transaction")
+            .navigationTitle(editingTransaction == nil ? "Add Transaction" : "Edit Transaction")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -124,8 +128,14 @@ struct AddTransactionView: View {
                     }
                 }
             }
+            .onAppear {
+                prefillIfNeeded()
+            }
             .sheet(isPresented: $showingCategoryPicker) {
                 CategoryPickerView(selectedCategory: $selectedCategory, isExpense: isExpense)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                    .presentationContentInteraction(.scrolls)
             }
             .overlay {
                 if isLoading {
@@ -145,6 +155,17 @@ struct AddTransactionView: View {
         }
     }
     
+    private func prefillIfNeeded() {
+        guard !didPrefill, let editing = editingTransaction else { return }
+        didPrefill = true
+        amount = String(editing.amount)
+        remark = editing.remark ?? ""
+        date = editing.date
+        isExpense = editing.type == .expenses
+        let source = isExpense ? categoryVM.expenseCategories : categoryVM.incomeCategories
+        selectedCategory = source.first { $0.name == editing.category }
+    }
+
     private func saveTransaction() {
         guard let category = selectedCategory,
               let amountDouble = Double(amount),
@@ -152,10 +173,12 @@ struct AddTransactionView: View {
             error = "Invalid input"
             return
         }
-        
+
         isLoading = true
-        
+
         let transaction = Transaction(
+            id: editingTransaction?.id ?? UUID().uuidString,
+            documentId: editingTransaction?.documentId,
             userId: userId,
             amount: amountDouble,
             type: isExpense ? .expenses : .income,
@@ -163,17 +186,25 @@ struct AddTransactionView: View {
             remark: remark.isEmpty ? nil : remark,
             date: date
         )
-        
+
         Task {
             do {
-                try await transactionVM.addTransaction(transaction)
+                if let original = editingTransaction {
+                    try await transactionVM.updateTransaction(original: original, updated: transaction)
+                } else {
+                    try await transactionVM.addTransaction(transaction)
+                }
                 await MainActor.run {
                     dismiss()
                 }
             } catch {
                 await MainActor.run {
-                    self.error = error.localizedDescription
-                    self.isLoading = false
+                    self.error = isOfflineError(error) ? "Saved. Will sync when online." : error.localizedDescription
+                    if isOfflineError(error) {
+                        dismiss()
+                    } else {
+                        self.isLoading = false
+                    }
                 }
             }
         }
@@ -185,30 +216,42 @@ struct CategoryPickerView: View {
     @EnvironmentObject private var categoryVM: CategoryViewModel
     @Binding var selectedCategory: Category?
     let isExpense: Bool
-    
+    @State private var searchText = ""
+    @State private var isReordering = false
+
     var categories: [Category] {
-        isExpense ? categoryVM.expenseCategories : categoryVM.incomeCategories
+        let source = isExpense ? categoryVM.expenseCategories : categoryVM.incomeCategories
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if query.isEmpty { return source }
+        return source.filter { $0.name.localizedCaseInsensitiveContains(query) }
     }
-    
+
+    private var canReorder: Bool {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var body: some View {
         NavigationView {
             List {
                 if categories.isEmpty {
-                    Text("Loading categories...")
+                    Text(searchText.isEmpty ? "No categories yet" : "No category found")
+                        .foregroundColor(.secondary)
                 } else {
                     ForEach(categories) { category in
                         Button {
+                            guard !isReordering else { return }
                             selectedCategory = category
                             dismiss()
                         } label: {
                             HStack(spacing: 16) {
                                 CategoryImageView(imageUrl: category.image, size: 40)
-                                
+
                                 Text(category.name)
                                     .foregroundColor(.primary)
-                                
+                                    .lineLimit(1)
+
                                 Spacer()
-                                
+
                                 if category.id == selectedCategory?.id {
                                     Image(systemName: "checkmark.circle.fill")
                                         .foregroundColor(.accentColor)
@@ -216,12 +259,27 @@ struct CategoryPickerView: View {
                             }
                         }
                     }
+                    .onMove(perform: canReorder && isReordering ? move : nil)
                 }
             }
-            .listStyle(.insetGrouped)
+            .listStyle(.plain)
+            .searchable(text: $searchText, prompt: "Search category")
+            .environment(\.editMode, .constant(isReordering && canReorder ? .active : .inactive))
+            .onChange(of: searchText) { _, newValue in
+                if !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    isReordering = false
+                }
+            }
             .navigationTitle(isExpense ? "Expense Categories" : "Income Categories")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if canReorder {
+                        Button(isReordering ? "Done" : "Reorder") {
+                            isReordering.toggle()
+                        }
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {
                         dismiss()
@@ -229,6 +287,10 @@ struct CategoryPickerView: View {
                 }
             }
         }
+    }
+
+    private func move(from source: IndexSet, to destination: Int) {
+        categoryVM.reorder(from: source, to: destination, isExpense: isExpense)
     }
 }
 

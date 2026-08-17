@@ -23,6 +23,12 @@ class OTPViewModel: ObservableObject {
         
         isLoading = true
         error = nil
+
+        guard NetworkMonitor.shared.isConnected else {
+            error = "This needs internet. Try again when you're online."
+            isLoading = false
+            return
+        }
         
         do {
             let credential = PhoneAuthProvider.provider().credential(

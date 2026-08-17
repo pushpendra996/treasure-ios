@@ -1,21 +1,32 @@
 import SwiftUI
 
-/// Group detail: summary + expenses (approve or reject flows can be added in a follow-up).
 struct ExpenseSharingGroupDetailView: View {
     let groupId: String
     let title: String
 
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var categoryVM: CategoryViewModel
+    @State private var group: SharingGroup?
     @State private var report: SharingReportData?
     @State private var expenses: [SharingExpense] = []
     @State private var isLoading = true
+    @State private var showingAddExpense = false
+    @State private var errorMessage: String?
+    @ObservedObject private var currencyStore = CurrencyStore.shared
+
+    private var isAdmin: Bool { group?.admin == true }
+    private var isClosed: Bool { group?.closed == true }
 
     var body: some View {
         List {
+            if let errorMessage {
+                Text(errorMessage).foregroundColor(.red).font(.footnote)
+            }
             if let report {
                 Section("Summary") {
-                    Text(String(format: "Approved: %.2f", report.totalApproved))
-                    Text(String(format: "Pending: %.2f", report.pendingTotal))
-                    Text("Rejected entries: \(report.rejectedCount)")
+                    LabeledContent("Approved", value: formattedAmount(report.totalApproved, fractionDigits: 2))
+                    LabeledContent("Pending", value: formattedAmount(report.pendingTotal, fractionDigits: 2))
+                    LabeledContent("Rejected", value: "\(report.rejectedCount)")
                 }
             }
             Section("Expenses") {
@@ -26,30 +37,71 @@ struct ExpenseSharingGroupDetailView: View {
                 ForEach(expenses) { e in
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
-                            Text(String(format: "%.2f", e.amount))
+                            Text(formattedAmount(e.amount, fractionDigits: 2))
                                 .font(.headline)
                             Spacer()
                             Text(e.status.uppercased())
-                                .font(.caption2)
-                                .padding(4)
-                                .background(statusColor(e.status).opacity(0.2))
-                                .cornerRadius(4)
+                                .font(.caption2.weight(.bold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(statusColor(e.status).opacity(0.18))
+                                .foregroundColor(statusColor(e.status))
+                                .clipShape(Capsule())
                         }
-                        Text("\(e.category) · \(e.place)")
+                        Text([e.category, e.place, e.note].filter { !$0.isEmpty }.joined(separator: " · "))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        if e.status == "rejected", let r = e.rejectionReason, !r.isEmpty {
-                            Text(r)
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        }
                     }
                     .padding(.vertical, 4)
                 }
             }
+            if isAdmin && !isClosed {
+                Section {
+                    Button("Close group", role: .destructive) {
+                        Task { await closeGroup() }
+                    }
+                    Button("Delete group", role: .destructive) {
+                        Task { await deleteGroup() }
+                    }
+                }
+            }
         }
+        .id(currencyStore.code)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink(destination: ExpenseSharingMembersView(groupId: groupId, isAdmin: isAdmin, isClosed: isClosed)) {
+                    Text("Members")
+                }
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if isAdmin && !isClosed {
+                Button {
+                    showingAddExpense = true
+                } label: {
+                    Label("Add expense", systemImage: "plus")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.accentColor)
+                        .clipShape(Capsule())
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+            }
+        }
+        .sheet(isPresented: $showingAddExpense) {
+            AddSharingExpenseSheet(groupId: groupId) {
+                showingAddExpense = false
+                Task { await load() }
+            }
+            .environmentObject(categoryVM)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
         .refreshable { await load() }
         .task { await load() }
     }
@@ -65,15 +117,97 @@ struct ExpenseSharingGroupDetailView: View {
     private func load() async {
         isLoading = true
         defer { isLoading = false }
+        do { group = try await SharingApi.getGroup(groupId: groupId) } catch { group = nil }
+        do { report = try await SharingApi.fetchReport(groupId: groupId) } catch { report = nil }
+        do { expenses = try await SharingApi.listExpenses(groupId: groupId) } catch { expenses = [] }
+    }
+
+    private func closeGroup() async {
         do {
-            report = try await SharingApi.fetchReport(groupId: groupId)
+            try await SharingApi.closeGroup(groupId: groupId)
+            await load()
         } catch {
-            report = nil
+            errorMessage = error.localizedDescription
         }
+    }
+
+    private func deleteGroup() async {
         do {
-            expenses = try await SharingApi.listExpenses(groupId: groupId)
+            try await SharingApi.deleteGroup(groupId: groupId)
+            dismiss()
         } catch {
-            expenses = []
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct AddSharingExpenseSheet: View {
+    let groupId: String
+    var onSaved: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var categoryVM: CategoryViewModel
+    @State private var amount = ""
+    @State private var category = "General"
+    @State private var place = ""
+    @State private var note = ""
+    @State private var error: String?
+    @State private var saving = false
+
+    var body: some View {
+        NavigationView {
+            Form {
+                HStack {
+                    Text(CurrencyStore.shared.symbol)
+                        .foregroundColor(.secondary)
+                    TextField("Amount", text: $amount)
+                        .keyboardType(.decimalPad)
+                }
+                Picker("Category", selection: $category) {
+                    ForEach(categoryVM.expenseCategories) { item in
+                        Text(item.name).tag(item.name)
+                    }
+                    Text("General").tag("General")
+                }
+                TextField("Where (optional)", text: $place)
+                TextField("Note (optional)", text: $note)
+                if let error {
+                    Text(error).foregroundColor(.red).font(.footnote)
+                }
+            }
+            .navigationTitle("Add expense")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { Task { await save() } }
+                        .disabled(Double(amount) == nil || saving)
+                }
+            }
+            .onAppear {
+                if let first = categoryVM.expenseCategories.first {
+                    category = first.name
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        guard let value = Double(amount) else { return }
+        saving = true
+        defer { saving = false }
+        do {
+            try await SharingApi.addExpense(
+                groupId: groupId,
+                amount: value,
+                category: category,
+                place: place,
+                note: note
+            )
+            onSaved()
+        } catch {
+            self.error = error.localizedDescription
         }
     }
 }

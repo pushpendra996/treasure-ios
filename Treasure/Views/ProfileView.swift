@@ -3,7 +3,9 @@ import FirebaseAuth
 
 struct ProfileView: View {
     @StateObject private var viewModel = SettingsViewModel()
+    @ObservedObject private var currencyStore = CurrencyStore.shared
     @Environment(\.dismiss) private var dismiss
+    @State private var showingCurrency = false
     
     var body: some View {
         NavigationView {
@@ -29,6 +31,20 @@ struct ProfileView: View {
                         viewModel.onTapProfile()
                     }
                 }
+
+                Section {
+                    Button {
+                        showingCurrency = true
+                    } label: {
+                        HStack {
+                            Label("Currency", systemImage: "dollarsign.circle")
+                            Spacer()
+                            Text(currencyStore.label)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .foregroundColor(.primary)
+                }
                 
                 Section {
                     Button(role: .destructive) {
@@ -51,6 +67,13 @@ struct ProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 viewModel.onAppear()
+            }
+            .sheet(isPresented: $showingCurrency) {
+                NavigationView {
+                    CurrencyPickerView()
+                }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
             }
         }
     }

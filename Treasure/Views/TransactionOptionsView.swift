@@ -4,9 +4,11 @@ struct TransactionOptionsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var transactionVM: TransactionViewModel
     @EnvironmentObject private var categoryVM: CategoryViewModel
+    @ObservedObject private var currencyStore = CurrencyStore.shared
     
     let transaction: Transaction
     @State private var showingDeleteAlert = false
+    @State private var showingEdit = false
     @State private var error: String?
     @State private var isLoading = false
     
@@ -34,7 +36,7 @@ struct TransactionOptionsView: View {
                         
                         Spacer()
                         
-                        Text(String(format: "%.2f", transaction.amount))
+                        Text(formattedAmount(transaction.amount, fractionDigits: 2))
                             .font(.headline)
                             .foregroundColor(transaction.type == .income ? .green : .red)
                     }
@@ -43,8 +45,7 @@ struct TransactionOptionsView: View {
                 
                 Section {
                     Button {
-                        // TODO: Implement edit functionality
-                        dismiss()
+                        showingEdit = true
                     } label: {
                         Label("Edit Transaction", systemImage: "pencil")
                     }
@@ -89,6 +90,16 @@ struct TransactionOptionsView: View {
                     Text(error)
                 }
             }
+            .sheet(isPresented: $showingEdit) {
+                AddTransactionView(editingTransaction: transaction)
+                    .environmentObject(transactionVM)
+                    .environmentObject(categoryVM)
+            }
+            .onChange(of: showingEdit) { _, isShowing in
+                if !isShowing {
+                    dismiss()
+                }
+            }
             .overlay {
                 if isLoading {
                     ProgressView()
@@ -107,9 +118,13 @@ struct TransactionOptionsView: View {
                     dismiss()
                 }
             } catch {
-                await MainActor.run {
-                    self.error = error.localizedDescription
-                    self.isLoading = false
+                if isOfflineError(error) {
+                    await MainActor.run { dismiss() }
+                } else {
+                    await MainActor.run {
+                        self.error = error.localizedDescription
+                        self.isLoading = false
+                    }
                 }
             }
         }

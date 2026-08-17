@@ -37,6 +37,8 @@ class SettingsViewModel: ObservableObject {
     func signOut() {
         do {
             try Auth.auth().signOut()
+            UserDefaults.standard.removeObject(forKey: "userData")
+            CurrencyStore.shared.clearLocal()
         } catch {
             print("Error signing out: \(error.localizedDescription)")
         }

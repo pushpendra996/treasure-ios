@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Hub for shared expense groups (parity with Android footer entry).
 struct ExpenseSharingView: View {
     @State private var groups: [SharingGroup] = []
     @State private var errorMessage: String?
+    @State private var showingCreate = false
 
     var body: some View {
         List {
@@ -12,22 +12,53 @@ struct ExpenseSharingView: View {
                     .foregroundColor(.red)
                     .font(.footnote)
             }
+            if groups.isEmpty {
+                Text("You are not in any expense group yet.")
+                    .foregroundColor(.secondary)
+            }
             ForEach(groups) { g in
                 NavigationLink(destination: ExpenseSharingGroupDetailView(groupId: g.id, title: g.name)) {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text(g.name)
                             .font(.headline)
-                        if g.isAdmin == true {
-                            Text("Admin")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                        HStack(spacing: 8) {
+                            Text(g.admin ? "Admin" : "Member")
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(g.admin ? Color.accentColor.opacity(0.12) : Color(.systemGray5))
+                                .foregroundColor(g.admin ? .accentColor : .secondary)
+                                .clipShape(Capsule())
+                            if g.closed {
+                                Text("Closed")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
                         }
                     }
+                    .padding(.vertical, 4)
                 }
             }
         }
         .navigationTitle("Split expenses")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showingCreate = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showingCreate) {
+            CreateSharingGroupSheet {
+                showingCreate = false
+                Task { await load() }
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
         .refreshable { await load() }
         .task { await load() }
     }
@@ -39,6 +70,54 @@ struct ExpenseSharingView: View {
         } catch {
             errorMessage = error.localizedDescription
             groups = []
+        }
+    }
+}
+
+private struct CreateSharingGroupSheet: View {
+    var onCreated: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var description = ""
+    @State private var error: String?
+    @State private var saving = false
+
+    var body: some View {
+        NavigationView {
+            Form {
+                TextField("Group name", text: $name)
+                TextField("Description (optional)", text: $description)
+                if let error {
+                    Text(error).foregroundColor(.red).font(.footnote)
+                }
+            }
+            .navigationTitle("Create group")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create") {
+                        Task { await create() }
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || saving)
+                }
+            }
+        }
+    }
+
+    private func create() async {
+        saving = true
+        defer { saving = false }
+        do {
+            try await SharingApi.createGroup(
+                name: name.trimmingCharacters(in: .whitespaces),
+                description: description.trimmingCharacters(in: .whitespaces)
+            )
+            onCreated()
+        } catch {
+            self.error = error.localizedDescription
         }
     }
 }

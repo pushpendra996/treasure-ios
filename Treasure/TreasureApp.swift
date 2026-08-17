@@ -1,14 +1,13 @@
 import SwiftUI
 import FirebaseCore
 import FirebaseAuth
+import UserNotifications
 
-// Import ViewModels
-import Foundation
-
-class AppDelegate: NSObject, UIApplicationDelegate {
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication,
                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         FirebaseApp.configure()
+        UNUserNotificationCenter.current().delegate = self
         
         // Configure Phone Auth
         Auth.auth().settings?.isAppVerificationDisabledForTesting = true // Set to true only for testing
@@ -42,6 +41,26 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         }
         // Handle other types of notifications here if needed
         completionHandler(.noData)
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        if notification.request.identifier.hasPrefix("treasure.expense.reminder") {
+            completionHandler([])
+            return
+        }
+        completionHandler([.banner, .sound])
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        completionHandler()
     }
 }
 

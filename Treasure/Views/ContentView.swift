@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var authVM = AuthViewModel()
+    @ObservedObject private var currencyStore = CurrencyStore.shared
     @State private var showingUserDetails = false
     
     var body: some View {
@@ -13,16 +14,20 @@ struct ContentView: View {
                             Label("Transactions", systemImage: "list.bullet")
                         }
                     
-                    ReportView()
-                        .tabItem {
-                            Label("Report", systemImage: "chart.pie")
-                        }
+                    NavigationView {
+                        ReportView()
+                    }
+                    .navigationViewStyle(.stack)
+                    .tabItem {
+                        Label("Report", systemImage: "chart.pie")
+                    }
                     
                     SettingsView()
                         .tabItem {
                             Label("Settings", systemImage: "gear")
                         }
                 }
+                .id(currencyStore.code)
             } else {
                 NavigationView {
                     LoginView()
@@ -41,6 +46,17 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .openUserDetails)) { _ in
             showingUserDetails = true
+        }
+        .onAppear {
+            if authVM.isAuthenticated {
+                ExpenseReminderScheduler.requestAndSchedule()
+                Task { await authVM.fetchUserData() }
+            }
+        }
+        .onChange(of: authVM.isAuthenticated) { _, isAuthenticated in
+            if isAuthenticated {
+                ExpenseReminderScheduler.requestAndSchedule()
+            }
         }
     }
 }

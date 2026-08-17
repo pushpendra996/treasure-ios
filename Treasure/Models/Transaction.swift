@@ -3,6 +3,7 @@ import FirebaseFirestore
 
 struct Transaction: Identifiable, Codable {
     var id: String
+    var documentId: String?
     var userId: String
     var amount: Double
     var type: TransactionType
@@ -30,6 +31,7 @@ struct Transaction: Identifiable, Codable {
     }
     
     init(id: String = UUID().uuidString,
+         documentId: String? = nil,
          userId: String,
          amount: Double,
          type: TransactionType,
@@ -38,6 +40,7 @@ struct Transaction: Identifiable, Codable {
          date: Date = Date(),
          tags: [String] = []) {
         self.id = id
+        self.documentId = documentId
         self.userId = userId
         self.amount = amount
         self.type = type
@@ -63,6 +66,7 @@ struct Transaction: Identifiable, Codable {
         }
         
         self.id = id
+        self.documentId = document.documentID
         self.userId = userId
         self.amount = amount
         self.type = type

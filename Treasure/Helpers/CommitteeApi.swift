@@ -8,6 +8,7 @@ enum CommitteeApi {
     static let baseURL = "https://treasuremoney.in/api"
     
     static func fetchMemberCommittees() async throws -> [Committee] {
+        guard NetworkMonitor.shared.isConnected else { throw CommitteeApiError.needsInternet }
         guard let user = Auth.auth().currentUser else {
             return []
         }
@@ -37,12 +38,15 @@ enum CommitteeApi {
 
 enum CommitteeApiError: LocalizedError {
     case invalidResponse
+    case needsInternet
     case serverError(statusCode: Int, message: String?)
     
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
             return "Invalid response"
+        case .needsInternet:
+            return "This needs internet. Try again when you're online."
         case .serverError(let code, let msg):
             return msg ?? "Error \(code)"
         }
