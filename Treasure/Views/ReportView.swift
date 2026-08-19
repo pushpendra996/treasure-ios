@@ -185,7 +185,7 @@ struct ReportView: View {
                         Text(item.key)
                             .lineLimit(1)
                         Spacer()
-                        Text("\(Int((item.value / max(total, 1)) * 100))%")
+                        Text(sharePercent(item.value, of: total))
                             .font(.caption)
                             .foregroundColor(.secondary)
                         Text(formattedAmount(item.value))
@@ -199,6 +199,14 @@ struct ReportView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal, 8)
         .padding(.top, 8)
+    }
+
+    private func sharePercent(_ value: Double, of total: Double) -> String {
+        guard value > 0, total > 0 else { return "0%" }
+        let percent = (value / total) * 100
+        if percent < 0.1 { return "<0.1%" }
+        if percent < 1 { return String(format: "%.1f%%", percent) }
+        return "\(Int(percent.rounded()))%"
     }
 
     private func color(for key: String, in slices: [(key: String, value: Double)]) -> Color {
