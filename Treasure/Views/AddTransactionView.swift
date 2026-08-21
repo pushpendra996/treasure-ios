@@ -63,7 +63,7 @@ struct AddTransactionView: View {
                             } label: {
                                 HStack {
                                     if let category = selectedCategory {
-                                        CategoryImageView(imageUrl: category.image, size: 24)
+                                        CategoryImageView(imageUrl: category.image, size: 24, name: category.name)
                                         Text(category.name)
                                             .foregroundColor(.primary)
                                     } else {
@@ -218,6 +218,9 @@ struct CategoryPickerView: View {
     let isExpense: Bool
     @State private var searchText = ""
     @State private var isReordering = false
+    @State private var showingEditor = false
+    @State private var editingCategory: Category?
+    @State private var hideTarget: Category?
 
     var categories: [Category] {
         let source = isExpense ? categoryVM.expenseCategories : categoryVM.incomeCategories
@@ -244,17 +247,35 @@ struct CategoryPickerView: View {
                             dismiss()
                         } label: {
                             HStack(spacing: 16) {
-                                CategoryImageView(imageUrl: category.image, size: 40)
+                                CategoryImageView(imageUrl: category.image, size: 40, name: category.name)
 
-                                Text(category.name)
-                                    .foregroundColor(.primary)
-                                    .lineLimit(1)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(category.name)
+                                        .foregroundColor(.primary)
+                                        .lineLimit(1)
+                                    if category.isPersonal {
+                                        Text("Yours")
+                                            .font(.caption2)
+                                            .foregroundColor(.accentColor)
+                                    }
+                                }
 
                                 Spacer()
 
                                 if category.id == selectedCategory?.id {
                                     Image(systemName: "checkmark.circle.fill")
                                         .foregroundColor(.accentColor)
+                                }
+                            }
+                        }
+                        .contextMenu {
+                            if category.isPersonal {
+                                Button("Rename") {
+                                    editingCategory = category
+                                    showingEditor = true
+                                }
+                                Button("Hide", role: .destructive) {
+                                    hideTarget = category
                                 }
                             }
                         }
@@ -280,17 +301,122 @@ struct CategoryPickerView: View {
                         }
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    Button("Add") {
+                        editingCategory = nil
+                        showingEditor = true
+                    }
                     Button("Cancel") {
                         dismiss()
                     }
                 }
+            }
+            .sheet(isPresented: $showingEditor) {
+                PersonalCategoryEditorView(
+                    isExpense: isExpense,
+                    existing: editingCategory
+                )
+                .environmentObject(categoryVM)
+            }
+            .alert("Hide this category?", isPresented: Binding(
+                get: { hideTarget != nil },
+                set: { if !$0 { hideTarget = nil } }
+            )) {
+                Button("Cancel", role: .cancel) { hideTarget = nil }
+                Button("Hide", role: .destructive) {
+                    if let hideTarget {
+                        categoryVM.hidePersonal(category: hideTarget) { _ in }
+                    }
+                    hideTarget = nil
+                }
+            } message: {
+                Text("Existing transactions keep the same name.")
             }
         }
     }
 
     private func move(from source: IndexSet, to destination: Int) {
         categoryVM.reorder(from: source, to: destination, isExpense: isExpense)
+    }
+}
+
+private struct PersonalCategoryEditorView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var categoryVM: CategoryViewModel
+    let isExpense: Bool
+    let existing: Category?
+
+    @State private var name: String = ""
+    @State private var selectedImage: String = ""
+    @State private var error: String?
+
+    var body: some View {
+        NavigationView {
+            Form {
+                TextField("Category name", text: $name)
+                Section("Icon (optional)") {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            iconCell(path: "", label: "A")
+                            ForEach(categoryVM.catalogImages(isExpense: isExpense), id: \.self) { path in
+                                iconCell(path: path, label: nil)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+                if let error {
+                    Text(error).foregroundColor(.red).font(.footnote)
+                }
+            }
+            .navigationTitle(existing == nil ? "Add category" : "Rename")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { save() }
+                }
+            }
+            .onAppear {
+                if let existing {
+                    name = existing.name
+                    selectedImage = existing.image
+                }
+            }
+        }
+    }
+
+    private func iconCell(path: String, label: String?) -> some View {
+        Button {
+            selectedImage = path
+        } label: {
+            CategoryImageView(imageUrl: path, size: 44, name: label ?? name)
+                .opacity(selectedImage == path ? 1 : 0.45)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func save() {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            error = "Enter a name"
+            return
+        }
+        if categoryVM.hasDuplicateName(trimmed, isExpense: isExpense, exceptId: existing?.id) {
+            error = "You already have this category"
+            return
+        }
+        if let existing {
+            categoryVM.renamePersonal(category: existing, name: trimmed) { ok in
+                if ok { dismiss() } else { error = "Could not save category" }
+            }
+        } else {
+            categoryVM.addPersonal(name: trimmed, image: selectedImage, isExpense: isExpense) { ok in
+                if ok { dismiss() } else { error = "Could not save category" }
+            }
+        }
     }
 }
 

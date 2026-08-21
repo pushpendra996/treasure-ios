@@ -172,7 +172,7 @@ struct TransactionRow: View {
 
     var body: some View {
         HStack {
-            CategoryImageView(imageUrl: categoryVM.getCategoryImage(for: transaction.category), size: 40)
+            CategoryImageView(imageUrl: categoryVM.getCategoryImage(for: transaction.category), size: 40, name: transaction.category)
 
             VStack(alignment: .leading) {
                 Text(transaction.category)

@@ -17,7 +17,7 @@ struct TransactionOptionsView: View {
             List {
                 Section {
                     HStack {
-                        CategoryImageView(imageUrl: categoryVM.getCategoryImage(for: transaction.category), size: 60)
+                        CategoryImageView(imageUrl: categoryVM.getCategoryImage(for: transaction.category), size: 60, name: transaction.category)
                         
                         VStack(alignment: .leading, spacing: 4) {
                             Text(transaction.category)
