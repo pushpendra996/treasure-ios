@@ -32,7 +32,7 @@ struct AllTransactionsView: View {
             }
 
             if viewModel.groups.isEmpty && !viewModel.isLoading {
-                Text("No transactions yet")
+                Text(L10n.string("hint_no_transactions_yet"))
                     .foregroundColor(.secondary)
             }
 

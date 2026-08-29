@@ -105,6 +105,10 @@
 	<string>We need access to phone numbers for authentication purposes.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>We need access to contacts to help you find your phone number.</string>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Treasure uses this to show relevant ads and measure ad performance.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>https</string>

@@ -44,7 +44,7 @@ struct TransactionListView: View {
                     }
 
                     if transactionVM.transactions.isEmpty && !transactionVM.isLoading {
-                        Text(NetworkMonitor.shared.isConnected ? "No transactions this month" : "No cached data for this month")
+                        Text(NetworkMonitor.shared.isConnected ? L10n.string("hint_no_transactions_month") : L10n.string("hint_no_cached_month"))
                             .foregroundColor(.secondary)
                     }
 
@@ -54,7 +54,7 @@ struct TransactionListView: View {
                 }
             }
             .id(currencyStore.code)
-            .navigationTitle("Transactions")
+            .navigationTitle(L10n.string("hint_all_transactions"))
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     NavigationLink(destination: ExpenseSharingView()) {
@@ -64,7 +64,9 @@ struct TransactionListView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        showingAddTransaction = true
+                        RewardedAds.showThenForAddTransaction {
+                            showingAddTransaction = true
+                        }
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .imageScale(.large)
@@ -81,6 +83,7 @@ struct TransactionListView: View {
             }
             .task {
                 await transactionVM.fetchTransactions(reset: true)
+                InAppReviewHelper.maybePrompt(source: .transactionList)
             }
             .onChange(of: transactionVM.selectedMonth) { _, _ in
                 Task {
@@ -117,19 +120,19 @@ struct TransactionListView: View {
         VStack(spacing: 8) {
             HStack(spacing: 10) {
                 summaryPill(
-                    title: "Expense",
+                    title: L10n.string("hint_expense"),
                     amount: transactionVM.monthExpenses,
                     color: .red,
                     icon: "arrow.down"
                 )
                 summaryPill(
-                    title: "Income",
+                    title: L10n.string("hint_income"),
                     amount: transactionVM.monthIncome,
                     color: .green,
                     icon: "arrow.up"
                 )
             }
-            Text("Balance: \(formattedAmount(transactionVM.monthIncome - transactionVM.monthExpenses))")
+            Text(L10n.format("hint_balance_label", formattedAmount(transactionVM.monthIncome - transactionVM.monthExpenses)))
                 .font(.caption.weight(.semibold))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 4)

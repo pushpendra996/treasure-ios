@@ -8,7 +8,7 @@ struct UserDetailsView: View {
     var body: some View {
         Form {
             Section {
-                TextField("Full Name", text: $viewModel.name)
+                TextField(L10n.string("hint_full_name"), text: $viewModel.name)
                     .textContentType(.name)
                     .autocapitalization(.words)
                 
@@ -38,7 +38,7 @@ struct UserDetailsView: View {
                         if viewModel.isLoading {
                             ProgressView()
                         } else {
-                            Text("Save")
+                            Text(L10n.string("hint_save"))
                         }
                         Spacer()
                     }
@@ -46,7 +46,7 @@ struct UserDetailsView: View {
                 .disabled(viewModel.name.isEmpty || viewModel.isLoading)
             }
         }
-        .navigationTitle("Profile")
+            .navigationTitle(L10n.string("hint_title_profile"))
         .navigationBarTitleDisplayMode(.inline)
         .alert("Error", isPresented: .constant(viewModel.error != nil)) {
             Button("OK") {

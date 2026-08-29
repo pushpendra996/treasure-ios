@@ -8,30 +8,35 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         FirebaseApp.configure()
         UNUserNotificationCenter.current().delegate = self
-        
-        // Configure Phone Auth
-        Auth.auth().settings?.isAppVerificationDisabledForTesting = true // Set to true only for testing
-        
+
+        Auth.auth().settings?.isAppVerificationDisabledForTesting = {
+            #if DEBUG
+            true
+            #else
+            false
+            #endif
+        }()
+
+        RewardedAds.requestConsentThenPreload()
+        AppUpdateHelper.checkForUpdate()
         return true
     }
-    
+
     func application(_ application: UIApplication,
                     open url: URL,
                     options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-        // Handle reCAPTCHA URL scheme
         return Auth.auth().canHandle(url)
     }
-    
+
     func application(_ application: UIApplication,
                     continue userActivity: NSUserActivity,
                     restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-        // Handle universal links
         if let url = userActivity.webpageURL {
             return Auth.auth().canHandle(url)
         }
         return false
     }
-    
+
     func application(_ application: UIApplication,
                     didReceiveRemoteNotification notification: [AnyHashable : Any],
                     fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
@@ -39,7 +44,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             completionHandler(.noData)
             return
         }
-        // Handle other types of notifications here if needed
         completionHandler(.noData)
     }
 
@@ -68,13 +72,18 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 struct TreasureApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var appVM = AppViewModel()
-    
+    @ObservedObject private var languageStore = LanguageStore.shared
+
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(appVM.transactionVM)
                 .environmentObject(appVM.categoryVM)
                 .environmentObject(appVM.walletVM)
+                .environment(\.locale, languageStore.locale)
+                .environment(\.layoutDirection, languageStore.layoutDirection)
+                .accentColor(TreasureTheme.purple)
+                .id(languageStore.code)
         }
     }
-} 
+}

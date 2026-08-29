@@ -5,7 +5,7 @@ struct OfflineBanner: View {
 
     var body: some View {
         if !monitor.isConnected {
-            Text("You're offline. Changes will sync when you're back.")
+            Text(L10n.string("hint_no_internet"))
                 .font(.footnote)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)

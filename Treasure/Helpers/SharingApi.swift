@@ -80,6 +80,19 @@ enum SharingApi {
         try await delete("/sharing/mobile/\(groupId)")
     }
 
+    static func approveExpense(groupId: String, expenseId: String) async throws {
+        try await patch("/sharing/mobile/\(groupId)/expenses/\(expenseId)", body: [
+            "action": "approve",
+        ])
+    }
+
+    static func rejectExpense(groupId: String, expenseId: String, reason: String) async throws {
+        try await patch("/sharing/mobile/\(groupId)/expenses/\(expenseId)", body: [
+            "action": "reject",
+            "rejectionReason": reason,
+        ])
+    }
+
     private static func get<T: Decodable>(_ path: String) async throws -> T {
         let (data, _) = try await send(path, method: "GET", body: nil)
         return try JSONDecoder().decode(T.self, from: data)
@@ -88,6 +101,15 @@ enum SharingApi {
     private static func post(_ path: String, body: [String: Any]) async throws {
         let payload = try JSONSerialization.data(withJSONObject: body)
         let (data, _) = try await send(path, method: "POST", body: payload)
+        let decoded = try JSONDecoder().decode(SharingSuccessResponse.self, from: data)
+        guard decoded.success else {
+            throw CommitteeApiError.serverError(statusCode: 200, message: decoded.message)
+        }
+    }
+
+    private static func patch(_ path: String, body: [String: Any]) async throws {
+        let payload = try JSONSerialization.data(withJSONObject: body)
+        let (data, _) = try await send(path, method: "PATCH", body: payload)
         let decoded = try JSONDecoder().decode(SharingSuccessResponse.self, from: data)
         guard decoded.success else {
             throw CommitteeApiError.serverError(statusCode: 200, message: decoded.message)

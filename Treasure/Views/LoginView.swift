@@ -7,7 +7,7 @@ struct LoginView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Enter your mobile number")
+            Text(L10n.string("hint_enter_mobile"))
                 .font(.title2)
                 .padding(.top, 40)
             
@@ -27,7 +27,7 @@ struct LoginView: View {
                     .cornerRadius(8)
                 }
                 
-                TextField("Mobile Number", text: $viewModel.phoneNumber)
+                TextField(L10n.string("hint_mobile_number"), text: $viewModel.phoneNumber)
                     .keyboardType(.numberPad)
                     .textContentType(.telephoneNumber)
                     .padding()
@@ -52,7 +52,7 @@ struct LoginView: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
-                    Text("Continue")
+                    Text(L10n.string("hint_continue"))
                         .fontWeight(.semibold)
                 }
             }
@@ -64,7 +64,7 @@ struct LoginView: View {
             .padding(.horizontal)
             .disabled(viewModel.phoneNumber.count < 10 || viewModel.isLoading)
             
-            Text("We'll send you a verification code")
+            Text(L10n.string("hint_send_code_subtitle"))
                 .foregroundColor(.gray)
                 .font(.subheadline)
             
@@ -130,11 +130,11 @@ struct CountryPickerView: View {
                     }
                 }
             }
-            .navigationTitle("Select Country")
+            .navigationTitle(L10n.string("hint_select_country"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button(L10n.string("hint_done")) {
                         dismiss()
                     }
                 }

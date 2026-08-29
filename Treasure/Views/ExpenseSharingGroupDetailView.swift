@@ -12,6 +12,9 @@ struct ExpenseSharingGroupDetailView: View {
     @State private var isLoading = true
     @State private var showingAddExpense = false
     @State private var errorMessage: String?
+    @State private var showingReject = false
+    @State private var rejectTarget: SharingExpense?
+    @State private var rejectReason = ""
     @ObservedObject private var currencyStore = CurrencyStore.shared
 
     private var isAdmin: Bool { group?.admin == true }
@@ -23,15 +26,15 @@ struct ExpenseSharingGroupDetailView: View {
                 Text(errorMessage).foregroundColor(.red).font(.footnote)
             }
             if let report {
-                Section("Summary") {
-                    LabeledContent("Approved", value: formattedAmount(report.totalApproved, fractionDigits: 2))
-                    LabeledContent("Pending", value: formattedAmount(report.pendingTotal, fractionDigits: 2))
-                    LabeledContent("Rejected", value: "\(report.rejectedCount)")
+                Section(L10n.string("hint_reports_summary")) {
+                    LabeledContent(L10n.string("hint_sharing_approved_short"), value: formattedAmount(report.totalApproved, fractionDigits: 2))
+                    LabeledContent(L10n.string("hint_sharing_pending_short"), value: formattedAmount(report.pendingTotal, fractionDigits: 2))
+                    LabeledContent(L10n.string("hint_sharing_rejected_short"), value: "\(report.rejectedCount)")
                 }
             }
-            Section("Expenses") {
+            Section(L10n.string("hint_expenses")) {
                 if expenses.isEmpty && !isLoading {
-                    Text("No expenses yet.")
+                    Text(L10n.string("hint_no_shared_expenses"))
                         .foregroundColor(.secondary)
                 }
                 ForEach(expenses) { e in
@@ -40,7 +43,7 @@ struct ExpenseSharingGroupDetailView: View {
                             Text(formattedAmount(e.amount, fractionDigits: 2))
                                 .font(.headline)
                             Spacer()
-                            Text(e.status.uppercased())
+                            Text(statusLabel(e.status))
                                 .font(.caption2.weight(.bold))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
@@ -51,16 +54,32 @@ struct ExpenseSharingGroupDetailView: View {
                         Text([e.category, e.place, e.note].filter { !$0.isEmpty }.joined(separator: " · "))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
+                        if isAdmin && !isClosed && e.status.lowercased() == "pending" {
+                            HStack {
+                                Button(L10n.string("hint_approve")) {
+                                    Task { await approve(e) }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.green)
+                                Button(L10n.string("hint_reject")) {
+                                    rejectTarget = e
+                                    showingReject = true
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(.red)
+                            }
+                            .padding(.top, 4)
+                        }
                     }
                     .padding(.vertical, 4)
                 }
             }
             if isAdmin && !isClosed {
                 Section {
-                    Button("Close group", role: .destructive) {
+                    Button(L10n.string("hint_close_group"), role: .destructive) {
                         Task { await closeGroup() }
                     }
-                    Button("Delete group", role: .destructive) {
+                    Button(L10n.string("hint_delete_group"), role: .destructive) {
                         Task { await deleteGroup() }
                     }
                 }
@@ -72,7 +91,7 @@ struct ExpenseSharingGroupDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 NavigationLink(destination: ExpenseSharingMembersView(groupId: groupId, isAdmin: isAdmin, isClosed: isClosed)) {
-                    Text("Members")
+                    Text(L10n.string("hint_members"))
                 }
             }
         }
@@ -81,7 +100,7 @@ struct ExpenseSharingGroupDetailView: View {
                 Button {
                     showingAddExpense = true
                 } label: {
-                    Label("Add expense", systemImage: "plus")
+                    Label(L10n.string("hint_add_shared_expense"), systemImage: "plus")
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -104,6 +123,26 @@ struct ExpenseSharingGroupDetailView: View {
         }
         .refreshable { await load() }
         .task { await load() }
+        .alert(L10n.string("hint_reject"), isPresented: $showingReject) {
+            TextField(L10n.string("hint_rejection_reason"), text: $rejectReason)
+            Button(L10n.string("hint_cancel"), role: .cancel) {
+                rejectTarget = nil
+                rejectReason = ""
+            }
+            Button(L10n.string("hint_reject"), role: .destructive) {
+                if let rejectTarget {
+                    Task { await reject(rejectTarget, reason: rejectReason) }
+                }
+            }
+        }
+    }
+
+    private func statusLabel(_ status: String) -> String {
+        switch status.lowercased() {
+        case "approved": return L10n.string("hint_sharing_approved_short")
+        case "rejected": return L10n.string("hint_sharing_rejected_short")
+        default: return L10n.string("hint_sharing_pending_short")
+        }
     }
 
     private func statusColor(_ status: String) -> Color {
@@ -135,6 +174,26 @@ struct ExpenseSharingGroupDetailView: View {
         do {
             try await SharingApi.deleteGroup(groupId: groupId)
             dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func approve(_ expense: SharingExpense) async {
+        do {
+            try await SharingApi.approveExpense(groupId: groupId, expenseId: expense.id)
+            await load()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func reject(_ expense: SharingExpense, reason: String) async {
+        do {
+            try await SharingApi.rejectExpense(groupId: groupId, expenseId: expense.id, reason: reason)
+            rejectTarget = nil
+            rejectReason = ""
+            await load()
         } catch {
             errorMessage = error.localizedDescription
         }

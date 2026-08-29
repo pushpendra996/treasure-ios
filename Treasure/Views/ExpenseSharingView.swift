@@ -13,7 +13,7 @@ struct ExpenseSharingView: View {
                     .font(.footnote)
             }
             if groups.isEmpty {
-                Text("You are not in any expense group yet.")
+                Text(L10n.string("hint_no_expense_groups"))
                     .foregroundColor(.secondary)
             }
             ForEach(groups) { g in
@@ -22,7 +22,7 @@ struct ExpenseSharingView: View {
                         Text(g.name)
                             .font(.headline)
                         HStack(spacing: 8) {
-                            Text(g.admin ? "Admin" : "Member")
+                            Text(g.admin ? L10n.string("hint_role_admin") : L10n.string("hint_member_role"))
                                 .font(.caption.weight(.semibold))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
@@ -40,7 +40,7 @@ struct ExpenseSharingView: View {
                 }
             }
         }
-        .navigationTitle("Split expenses")
+        .navigationTitle(L10n.string("hint_expense_sharing"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

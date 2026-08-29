@@ -19,7 +19,7 @@ class TransactionViewModel: ObservableObject {
         let calendar = Calendar.current
         if calendar.isDate(selectedMonth, equalTo: Date(), toGranularity: .month) {
             let name = selectedMonth.formatted(.dateTime.month(.wide))
-            return "Current Month - \(name)"
+            return L10n.format("hint_current_month", name)
         }
         return selectedMonth.formatted(.dateTime.month(.wide).year())
     }
@@ -111,6 +111,22 @@ class TransactionViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    func duplicateTransaction(_ transaction: Transaction) async throws {
+        guard Auth.auth().currentUser?.uid != nil else {
+            throw NSError(domain: "TransactionError", code: -1, userInfo: [NSLocalizedDescriptionKey: L10n.string("hint_please_log_in")])
+        }
+        let copy = Transaction(
+            userId: transaction.userId,
+            amount: transaction.amount,
+            type: transaction.type,
+            category: transaction.category,
+            remark: transaction.remark,
+            date: Date(),
+            tags: transaction.tags
+        )
+        try await addTransaction(copy)
     }
 
     func fetchTransactions(forDate date: Date? = nil, reset: Bool = false) async {

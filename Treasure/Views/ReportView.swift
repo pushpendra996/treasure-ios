@@ -23,9 +23,9 @@ struct ReportView: View {
             OfflineBanner()
             ScrollView {
                 VStack(spacing: 0) {
-                    Picker("Timeframe", selection: $reportVM.timeframe) {
+                    Picker(L10n.string("hint_timeframe"), selection: $reportVM.timeframe) {
                         ForEach(ReportViewModel.Timeframe.allCases, id: \.self) { timeframe in
-                            Text(timeframe.rawValue).tag(timeframe)
+                            Text(timeframe == .month ? L10n.string("hint_report_timeframe_month") : L10n.string("hint_report_timeframe_year")).tag(timeframe)
                         }
                     }
                     .pickerStyle(.segmented)
@@ -51,7 +51,7 @@ struct ReportView: View {
                                 .font(.title2.weight(.bold))
                                 .foregroundColor(Color(red: 0.38, green: 0.19, blue: 0.98))
                                 .multilineTextAlignment(.center)
-                            Text("Based on your saved transactions")
+                            Text(L10n.string("hint_report_based_on_saved"))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -75,10 +75,10 @@ struct ReportView: View {
                     .padding(.top, 8)
 
                     HStack(spacing: 8) {
-                        SummaryCard(title: "Income", amount: reportVM.totalIncome, color: .green, icon: "arrow.up")
-                        SummaryCard(title: "Expense", amount: reportVM.totalExpenses, color: .red, icon: "arrow.down")
+                        SummaryCard(title: L10n.string("hint_income"), amount: reportVM.totalIncome, color: .green, icon: "arrow.up")
+                        SummaryCard(title: L10n.string("hint_expense"), amount: reportVM.totalExpenses, color: .red, icon: "arrow.down")
                         SummaryCard(
-                            title: "Net",
+                            title: L10n.string("hint_net_balance"),
                             amount: reportVM.netBalance,
                             color: reportVM.netBalance >= 0 ? .green : .red,
                             icon: "plusminus"
@@ -88,7 +88,7 @@ struct ReportView: View {
                     .padding(.top, 8)
 
                     if reportVM.totalIncome == 0 && reportVM.totalExpenses == 0 {
-                        Text("Nothing to show for this period.")
+                        Text(L10n.string("hint_report_chart_empty"))
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -98,8 +98,8 @@ struct ReportView: View {
                             .padding(.top, 8)
                     }
 
-                    categoryCard(title: "Income by category", data: reportVM.incomeByCategory)
-                    categoryCard(title: "Expense by category", data: reportVM.expensesByCategory)
+                    categoryCard(title: L10n.string("hint_income_by_category"), data: reportVM.incomeByCategory)
+                    categoryCard(title: L10n.string("hint_expense_by_category"), data: reportVM.expensesByCategory)
 
                     if reportVM.timeframe == .year {
                         monthlyTrendCard
@@ -110,18 +110,21 @@ struct ReportView: View {
             }
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
-        .navigationTitle("Reports")
-        .task { await reportVM.loadData() }
+        .navigationTitle(L10n.string("hint_title_reports"))
+        .task {
+            await reportVM.loadData()
+            InAppReviewHelper.maybePrompt(source: .reports)
+        }
         .refreshable { await reportVM.loadData() }
     }
 
     private var monthlyTrendCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Monthly income vs expense")
+            Text(L10n.string("hint_monthly_trend"))
                 .font(.headline)
             HStack(spacing: 16) {
-                legendDot(color: .green, title: "Income")
-                legendDot(color: .red, title: "Expense")
+                legendDot(color: .green, title: L10n.string("hint_report_bar_legend_income"))
+                legendDot(color: .red, title: L10n.string("hint_report_bar_legend_expense"))
             }
             Chart {
                 ForEach(reportVM.monthlyData.sorted(by: { $0.key < $1.key }), id: \.key) { month, data in
@@ -156,7 +159,7 @@ struct ReportView: View {
             Text(title)
                 .font(.headline)
             if slices.isEmpty {
-                Text("Nothing to show for this period.")
+                Text(L10n.string("hint_report_chart_empty"))
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
@@ -173,7 +176,7 @@ struct ReportView: View {
                 .chartLegend(.hidden)
                 .frame(height: 200)
 
-                Text("Total \(formattedAmount(total))")
+                Text(L10n.format("hint_report_total", formattedAmount(total)))
                     .font(.subheadline.weight(.bold))
                     .frame(maxWidth: .infinity)
 

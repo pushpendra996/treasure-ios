@@ -14,11 +14,11 @@ struct OTPVerificationView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Verify OTP")
+            Text(L10n.string("hint_title_verify_otp"))
                 .font(.title2)
                 .padding(.top, 40)
             
-            Text("OTP has been sent to")
+            Text(L10n.string("hint_otp_send_heading"))
                 .foregroundColor(.gray)
             
             Text(phoneNumber)
@@ -54,7 +54,7 @@ struct OTPVerificationView: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
-                    Text("Verify")
+                    Text(L10n.string("hint_verify"))
                         .fontWeight(.semibold)
                 }
             }
@@ -71,7 +71,7 @@ struct OTPVerificationView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel") {
+                Button(L10n.string("hint_cancel")) {
                     dismiss()
                 }
             }

@@ -69,7 +69,7 @@ struct AddTransactionView: View {
                                     } else {
                                         Image(systemName: "square.grid.2x2")
                                             .foregroundColor(.accentColor)
-                                        Text("Select Category")
+                                        Text(L10n.string("hint_select_category"))
                                             .foregroundColor(.primary)
                                     }
                                     Spacer()
@@ -193,6 +193,7 @@ struct AddTransactionView: View {
                     try await transactionVM.updateTransaction(original: original, updated: transaction)
                 } else {
                     try await transactionVM.addTransaction(transaction)
+                    RewardedAds.onTransactionSaved()
                 }
                 await MainActor.run {
                     dismiss()
