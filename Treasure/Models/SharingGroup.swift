@@ -75,6 +75,18 @@ struct SharingSuccessResponse: Decodable {
     let message: String?
 }
 
+struct SharingGroupDetailData: Decodable {
+    let group: SharingGroup
+    let members: [SharingMember]
+    let report: SharingReportData
+    let expenses: [SharingExpense]?
+}
+
+struct SharingGroupDetailResponse: Decodable {
+    let success: Bool
+    let data: SharingGroupDetailData
+}
+
 struct SharingAdminStatsResponse: Decodable {
     let success: Bool
     let data: SharingAdminStats

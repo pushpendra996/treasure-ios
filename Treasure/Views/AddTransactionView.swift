@@ -37,6 +37,7 @@ struct AddTransactionView: View {
                             .padding(.horizontal)
                             .onChange(of: isExpense) { _, _ in
                                 selectedCategory = nil
+                                applyDefaultCategoryIfNeeded()
                             }
                             
                             HStack {
@@ -130,6 +131,13 @@ struct AddTransactionView: View {
             }
             .onAppear {
                 prefillIfNeeded()
+                applyDefaultCategoryIfNeeded()
+            }
+            .onChange(of: categoryVM.expenseCategories.count) { _, _ in
+                applyDefaultCategoryIfNeeded()
+            }
+            .onChange(of: categoryVM.incomeCategories.count) { _, _ in
+                applyDefaultCategoryIfNeeded()
             }
             .sheet(isPresented: $showingCategoryPicker) {
                 CategoryPickerView(selectedCategory: $selectedCategory, isExpense: isExpense)
@@ -164,6 +172,13 @@ struct AddTransactionView: View {
         isExpense = editing.type == .expenses
         let source = isExpense ? categoryVM.expenseCategories : categoryVM.incomeCategories
         selectedCategory = source.first { $0.name == editing.category }
+    }
+
+    private func applyDefaultCategoryIfNeeded() {
+        if editingTransaction != nil, didPrefill { return }
+        let source = isExpense ? categoryVM.expenseCategories : categoryVM.incomeCategories
+        guard selectedCategory == nil else { return }
+        selectedCategory = source.first
     }
 
     private func saveTransaction() {

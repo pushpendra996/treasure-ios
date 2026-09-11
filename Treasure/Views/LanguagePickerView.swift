@@ -49,7 +49,7 @@ struct LanguagePickerView: View {
             .padding(.top, 16)
             .padding(.bottom, 28)
         }
-        .background(TreasureTheme.languageBackground.ignoresSafeArea())
+        .background(Color(.systemBackground).ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .id(store.code)
     }
@@ -67,7 +67,7 @@ struct LanguagePickerView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(L10n.string("hint_language_picker_title"))
                     .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(TreasureTheme.title)
+                    .foregroundColor(.primary)
                 Text(L10n.string("hint_language_picker_subtitle"))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -84,7 +84,7 @@ struct LanguagePickerView: View {
                 .font(.subheadline.weight(.bold))
                 .foregroundColor(TreasureTheme.purple)
             Rectangle()
-                .fill(TreasureTheme.languageDivider)
+                .fill(Color(.separator).opacity(0.35))
                 .frame(height: 1)
         }
     }
@@ -99,7 +99,7 @@ struct LanguagePickerView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(option.nativeLabel)
                         .font(.body.weight(.semibold))
-                        .foregroundColor(TreasureTheme.title)
+                        .foregroundColor(.primary)
                     if option.nativeLabel != option.englishLabel {
                         Text(option.englishLabel)
                             .font(.caption)
@@ -113,7 +113,7 @@ struct LanguagePickerView: View {
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(selected ? TreasureTheme.purple.opacity(0.10) : Color.white)
+                    .fill(selected ? TreasureTheme.purple.opacity(0.10) : Color(.secondarySystemGroupedBackground))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -136,7 +136,7 @@ struct LanguagePickerView: View {
                 }
                 Text(option.nativeLabel)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(TreasureTheme.title)
+                    .foregroundColor(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Text(option.englishLabel)
@@ -147,7 +147,7 @@ struct LanguagePickerView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(selected ? TreasureTheme.purple.opacity(0.10) : Color.white)
+                    .fill(selected ? TreasureTheme.purple.opacity(0.10) : Color(.secondarySystemGroupedBackground))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -192,7 +192,7 @@ struct LanguagePickerView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(TreasureTheme.languageFooter)
+                .fill(TreasureTheme.purple.opacity(0.12))
         )
     }
 

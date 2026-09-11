@@ -19,6 +19,9 @@ class AuthViewModel: ObservableObject {
     private func setupAuthStateListener() {
         stateListener = auth.addStateDidChangeListener { [weak self] _, user in
             self?.isAuthenticated = user != nil
+            if user != nil {
+                FcmTokenRegistrar.requestPermissionAndRegister()
+            }
         }
     }
     

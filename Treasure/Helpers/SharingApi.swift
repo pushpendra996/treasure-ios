@@ -24,6 +24,14 @@ enum SharingApi {
         return decoded.data
     }
 
+    static func fetchDetail(groupId: String) async throws -> SharingGroupDetailData {
+        let decoded: SharingGroupDetailResponse = try await get("/sharing/mobile/\(groupId)/detail")
+        guard decoded.success else {
+            throw CommitteeApiError.serverError(statusCode: 200, message: "Group not found")
+        }
+        return decoded.data
+    }
+
     static func listMembers(groupId: String) async throws -> [SharingMember] {
         let decoded: SharingMembersResponse = try await get("/sharing/mobile/\(groupId)/members")
         return decoded.success ? decoded.data : []

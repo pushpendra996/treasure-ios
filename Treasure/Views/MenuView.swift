@@ -33,7 +33,7 @@ struct MenuView: View {
                 .padding(.top, 10)
                 .padding(.bottom, 28)
             }
-            .background(TreasureTheme.screenBackground.ignoresSafeArea())
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle(L10n.string("hint_menu"))
             .onAppear { viewModel.onAppear() }
             .navigationDestination(isPresented: $goReports) { ReportView() }
@@ -100,9 +100,12 @@ struct MenuView: View {
                 }
                 Spacer()
                 Image(systemName: "pencil")
-                    .foregroundColor(TreasureTheme.purple)
+                    .foregroundColor(Color.primary)
                     .frame(width: 34, height: 34)
-                    .background(TreasureTheme.tileBackground())
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color(.tertiarySystemFill))
+                    )
             }
             .padding(14)
             .background(menuCard)
@@ -240,9 +243,12 @@ struct MenuView: View {
     private func menuIcon(_ name: String) -> some View {
         Image(systemName: name)
             .font(.system(size: 15, weight: .semibold))
-            .foregroundColor(TreasureTheme.purple)
+            .foregroundColor(Color.primary)
             .frame(width: 34, height: 34)
-            .background(TreasureTheme.tileBackground())
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color(.tertiarySystemFill))
+            )
     }
 
     private func menuRow(title: String, icon: String) -> some View {

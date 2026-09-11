@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1216238FC2F136E6EDF0559E /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = FD17621970A6AA84D4537966 /* GoogleService-Info.plist */; };
+		2DE9C3A44FB1009A118127B2 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 685EC6B43AA247DDF5571EF4 /* FirebaseMessaging */; };
 		F475EE3E2DAF905B000DE4FF /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = F475EE3D2DAF905B000DE4FF /* FirebaseAnalytics */; };
 		F475EE402DAF905B000DE4FF /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = F475EE3F2DAF905B000DE4FF /* FirebaseAuth */; };
 		F475EE422DAF905B000DE4FF /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = F475EE412DAF905B000DE4FF /* FirebaseCore */; };
@@ -40,10 +42,11 @@
 		F46AD1FA2DAF893E00EB5D58 /* Treasure.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Treasure.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F46AD2082DAF893F00EB5D58 /* TreasureTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TreasureTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F46AD2122DAF893F00EB5D58 /* TreasureUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TreasureUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FD17621970A6AA84D4537966 /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = text.plist; lastKnownFileType = text.plist; name = "GoogleService-Info.plist"; path = "Treasure/GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		F475EEA42DAFA93A000DE4FF /* Exceptions for "Treasure" folder in "Treasure" target */ = {
+		F475EEA42DAFA93A000DE4FF /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -56,7 +59,7 @@
 		F46AD1FC2DAF893E00EB5D58 /* Treasure */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				F475EEA42DAFA93A000DE4FF /* Exceptions for "Treasure" folder in "Treasure" target */,
+				F475EEA42DAFA93A000DE4FF /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
 			);
 			path = Treasure;
 			sourceTree = "<group>";
@@ -88,6 +91,7 @@
 				F475EE402DAF905B000DE4FF /* FirebaseAuth in Frameworks */,
 				F4A11AD52DAFC001000DE4FF /* GoogleMobileAds in Frameworks */,
 				F4A11AD62DAFC001000DE4FF /* GoogleUserMessagingPlatform in Frameworks */,
+				2DE9C3A44FB1009A118127B2 /* FirebaseMessaging in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -116,6 +120,7 @@
 				F46AD2152DAF893F00EB5D58 /* TreasureUITests */,
 				F475EEB02DAFB4DF000DE4FF /* Frameworks */,
 				F46AD1FB2DAF893E00EB5D58 /* Products */,
+				FD17621970A6AA84D4537966 /* GoogleService-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -166,6 +171,7 @@
 				F475EF032DAFBA37000DE4FF /* SDWebImageSwiftUI */,
 				F4A11AD32DAFC001000DE4FF /* GoogleMobileAds */,
 				F4A11AD42DAFC001000DE4FF /* GoogleUserMessagingPlatform */,
+				685EC6B43AA247DDF5571EF4 /* FirebaseMessaging */,
 			);
 			productName = Treasure;
 			productReference = F46AD1FA2DAF893E00EB5D58 /* Treasure.app */;
@@ -284,6 +290,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1216238FC2F136E6EDF0559E /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -482,6 +489,9 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.4;
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.treasure.money;
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.treasure.money;
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = com.treasure.money;
@@ -525,6 +535,9 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.4;
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.treasure.money;
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.treasure.money;
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = com.treasure.money;
@@ -708,6 +721,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		685EC6B43AA247DDF5571EF4 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F475EE3C2DAF905B000DE4FF /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
 		F475EE3D2DAF905B000DE4FF /* FirebaseAnalytics */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F475EE3C2DAF905B000DE4FF /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

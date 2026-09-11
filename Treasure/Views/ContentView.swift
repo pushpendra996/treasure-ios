@@ -4,7 +4,9 @@ struct ContentView: View {
     @StateObject private var authVM = AuthViewModel()
     @ObservedObject private var currencyStore = CurrencyStore.shared
     @ObservedObject private var languageStore = LanguageStore.shared
+    @ObservedObject private var sharingDeepLink = SharingDeepLinkStore.shared
     @State private var showingUserDetails = false
+    @State private var openedSharingGroupId: String?
 
     var body: some View {
         Group {
@@ -59,13 +61,38 @@ struct ContentView: View {
                 if ExpenseReminderScheduler.isEnabled {
                     ExpenseReminderScheduler.requestAndSchedule()
                 }
+                FcmTokenRegistrar.requestPermissionAndRegister()
                 Task { await authVM.fetchUserData() }
             }
         }
         .onChange(of: authVM.isAuthenticated) { _, isAuthenticated in
-            if isAuthenticated, ExpenseReminderScheduler.isEnabled {
-                ExpenseReminderScheduler.requestAndSchedule()
+            if isAuthenticated {
+                FcmTokenRegistrar.requestPermissionAndRegister()
+                if ExpenseReminderScheduler.isEnabled {
+                    ExpenseReminderScheduler.requestAndSchedule()
+                }
+                if let groupId = sharingDeepLink.pendingGroupId, !groupId.isEmpty {
+                    openedSharingGroupId = SharingDeepLinkStore.shared.consume()
+                }
             }
+        }
+        .onChange(of: sharingDeepLink.pendingGroupId) { _, groupId in
+            guard authVM.isAuthenticated, let groupId, !groupId.isEmpty else { return }
+            openedSharingGroupId = SharingDeepLinkStore.shared.consume()
+        }
+        .fullScreenCover(item: Binding(
+            get: { openedSharingGroupId.map { SharingGroupDeepLink($0) } },
+            set: { openedSharingGroupId = $0?.id }
+        )) { link in
+            NavigationView {
+                ExpenseSharingGroupDetailView(groupId: link.id, title: L10n.string("hint_expense_sharing"))
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button(L10n.string("hint_done")) { openedSharingGroupId = nil }
+                        }
+                    }
+            }
+            .navigationViewStyle(.stack)
         }
     }
 }
@@ -74,4 +101,9 @@ struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
     }
+}
+
+private struct SharingGroupDeepLink: Identifiable {
+    let id: String
+    init(_ id: String) { self.id = id }
 }

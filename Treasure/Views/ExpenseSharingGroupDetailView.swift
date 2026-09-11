@@ -156,9 +156,21 @@ struct ExpenseSharingGroupDetailView: View {
     private func load() async {
         isLoading = true
         defer { isLoading = false }
-        do { group = try await SharingApi.getGroup(groupId: groupId) } catch { group = nil }
-        do { report = try await SharingApi.fetchReport(groupId: groupId) } catch { report = nil }
-        do { expenses = try await SharingApi.listExpenses(groupId: groupId) } catch { expenses = [] }
+        do {
+            let detail = try await SharingApi.fetchDetail(groupId: groupId)
+            group = detail.group
+            report = detail.report
+            if let rows = detail.expenses {
+                expenses = rows
+            } else {
+                expenses = (try? await SharingApi.listExpenses(groupId: groupId)) ?? []
+            }
+        } catch {
+            group = nil
+            report = nil
+            expenses = []
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func closeGroup() async {
@@ -206,7 +218,8 @@ private struct AddSharingExpenseSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var categoryVM: CategoryViewModel
     @State private var amount = ""
-    @State private var category = "General"
+    @State private var selectedCategory: Category?
+    @State private var showingCategoryPicker = false
     @State private var place = ""
     @State private var note = ""
     @State private var error: String?
@@ -221,11 +234,24 @@ private struct AddSharingExpenseSheet: View {
                     TextField("Amount", text: $amount)
                         .keyboardType(.decimalPad)
                 }
-                Picker("Category", selection: $category) {
-                    ForEach(categoryVM.expenseCategories) { item in
-                        Text(item.name).tag(item.name)
+                Button {
+                    showingCategoryPicker = true
+                } label: {
+                    HStack {
+                        if let category = selectedCategory {
+                            CategoryImageView(imageUrl: category.image, size: 24, name: category.name)
+                            Text(category.name)
+                                .foregroundColor(.primary)
+                        } else {
+                            Image(systemName: "square.grid.2x2")
+                                .foregroundColor(.accentColor)
+                            Text(L10n.string("hint_select_category"))
+                                .foregroundColor(.primary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                            .foregroundColor(.secondary)
                     }
-                    Text("General").tag("General")
                 }
                 TextField("Where (optional)", text: $place)
                 TextField("Note (optional)", text: $note)
@@ -244,12 +270,23 @@ private struct AddSharingExpenseSheet: View {
                         .disabled(Double(amount) == nil || saving)
                 }
             }
-            .onAppear {
-                if let first = categoryVM.expenseCategories.first {
-                    category = first.name
-                }
+            .sheet(isPresented: $showingCategoryPicker) {
+                CategoryPickerView(selectedCategory: $selectedCategory, isExpense: true)
+                    .environmentObject(categoryVM)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                    .presentationContentInteraction(.scrolls)
+            }
+            .onAppear { applyDefaultCategoryIfNeeded() }
+            .onChange(of: categoryVM.expenseCategories.count) { _, _ in
+                applyDefaultCategoryIfNeeded()
             }
         }
+    }
+
+    private func applyDefaultCategoryIfNeeded() {
+        guard selectedCategory == nil else { return }
+        selectedCategory = categoryVM.expenseCategories.first
     }
 
     private func save() async {
@@ -260,7 +297,7 @@ private struct AddSharingExpenseSheet: View {
             try await SharingApi.addExpense(
                 groupId: groupId,
                 amount: value,
-                category: category,
+                category: selectedCategory?.name ?? "General",
                 place: place,
                 note: note
             )

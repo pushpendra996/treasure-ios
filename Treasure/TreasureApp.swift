@@ -1,13 +1,15 @@
 import SwiftUI
 import FirebaseCore
 import FirebaseAuth
+import FirebaseMessaging
 import UserNotifications
 
-class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate {
     func application(_ application: UIApplication,
                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         FirebaseApp.configure()
         UNUserNotificationCenter.current().delegate = self
+        Messaging.messaging().delegate = self
 
         Auth.auth().settings?.isAppVerificationDisabledForTesting = {
             #if DEBUG
@@ -19,6 +21,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         RewardedAds.requestConsentThenPreload()
         AppUpdateHelper.checkForUpdate()
+
+        if let remote = launchOptions?[.remoteNotification] as? [AnyHashable: Any] {
+            SharingDeepLinkStore.shared.capture(remote)
+        }
         return true
     }
 
@@ -38,13 +44,25 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func application(_ application: UIApplication,
+                    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        Messaging.messaging().apnsToken = deviceToken
+        Auth.auth().setAPNSToken(deviceToken, type: .unknown)
+        FcmTokenRegistrar.register()
+    }
+
+    func application(_ application: UIApplication,
                     didReceiveRemoteNotification notification: [AnyHashable : Any],
                     fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
         if Auth.auth().canHandleNotification(notification) {
             completionHandler(.noData)
             return
         }
+        SharingDeepLinkStore.shared.capture(notification)
         completionHandler(.noData)
+    }
+
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        FcmTokenRegistrar.register(token: fcmToken)
     }
 
     func userNotificationCenter(
@@ -64,6 +82,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
+        SharingDeepLinkStore.shared.capture(response.notification.request.content.userInfo)
         completionHandler()
     }
 }
