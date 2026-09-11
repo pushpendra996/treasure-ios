@@ -20,11 +20,7 @@ struct ExpenseSharingMembersView: View {
             }
             ForEach(members) { member in
                 HStack(spacing: 12) {
-                    Text(avatarLetter(member.displayName))
-                        .font(.headline)
-                        .foregroundColor(.accentColor)
-                        .frame(width: 44, height: 44)
-                        .background(Circle().fill(Color.accentColor.opacity(0.12)))
+                    SharingLetterAvatar(name: member.displayName, size: 44)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(member.displayName)
                             .font(.headline)
@@ -86,10 +82,6 @@ struct ExpenseSharingMembersView: View {
         .refreshable { await load() }
     }
 
-    private func avatarLetter(_ name: String) -> String {
-        String(name.trimmingCharacters(in: .whitespaces).first ?? "?").uppercased()
-    }
-
     private func shouldShowMobile(_ member: SharingMember) -> Bool {
         let digitsName = member.displayName.filter(\.isNumber)
         let digitsMobile = member.mobile.filter(\.isNumber)
@@ -100,17 +92,24 @@ struct ExpenseSharingMembersView: View {
     }
 
     private func load() async {
+        if let cached = SharingGroupCache.peek(groupId) {
+            members = cached.members
+        }
         do {
-            members = try await SharingApi.listMembers(groupId: groupId)
+            let detail = try await SharingGroupCache.load(groupId, force: true)
+            members = detail.members
             errorMessage = nil
         } catch {
-            errorMessage = error.localizedDescription
+            if members.isEmpty {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
     private func remove(_ member: SharingMember) async {
         do {
             try await SharingApi.removeMember(groupId: groupId, memberId: member.id)
+            SharingGroupCache.invalidate(groupId)
             await load()
         } catch {
             errorMessage = error.localizedDescription
@@ -159,6 +158,7 @@ private struct AddSharingMemberSheet: View {
         defer { saving = false }
         do {
             try await SharingApi.addMember(groupId: groupId, name: name, mobile: mobile)
+            SharingGroupCache.invalidate(groupId)
             onSaved()
         } catch {
             self.error = error.localizedDescription

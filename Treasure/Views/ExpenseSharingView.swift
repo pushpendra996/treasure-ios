@@ -18,26 +18,26 @@ struct ExpenseSharingView: View {
             }
             ForEach(groups) { g in
                 NavigationLink(destination: ExpenseSharingGroupDetailView(groupId: g.id, title: g.name)) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(g.name)
-                            .font(.headline)
-                        HStack(spacing: 8) {
-                            Text(g.admin ? L10n.string("hint_role_admin") : L10n.string("hint_member_role"))
-                                .font(.caption.weight(.semibold))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(g.admin ? Color.accentColor.opacity(0.12) : Color(.systemGray5))
-                                .foregroundColor(g.admin ? .accentColor : .secondary)
-                                .clipShape(Capsule())
-                            if g.closed {
-                                Text("Closed")
-                                    .font(.caption)
-                                    .foregroundColor(.red)
+                    HStack(spacing: 12) {
+                        SharingLetterAvatar(name: g.name, size: 48)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(g.name)
+                                .font(.headline)
+                            HStack(spacing: 8) {
+                                Text(g.admin ? L10n.string("hint_role_admin") : L10n.string("hint_member_role"))
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                if g.closed {
+                                    Text("Closed")
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                }
                             }
                         }
                     }
                     .padding(.vertical, 4)
                 }
+                .simultaneousGesture(TapGesture().onEnded { SharingGroupCache.prefetch(g.id) })
             }
         }
         .navigationTitle(L10n.string("hint_expense_sharing"))

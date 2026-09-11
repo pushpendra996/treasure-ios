@@ -59,13 +59,22 @@ enum SharingApi {
         category: String,
         place: String,
         note: String
-    ) async throws {
-        try await post("/sharing/mobile/\(groupId)/expenses", body: [
+    ) async throws -> String {
+        let payload = try JSONSerialization.data(withJSONObject: [
             "amount": amount,
             "category": category,
             "place": place,
             "note": note,
         ])
+        let (data, _) = try await send("/sharing/mobile/\(groupId)/expenses", method: "POST", body: payload)
+        let json = (try JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+        guard json["success"] as? Bool == true else {
+            throw CommitteeApiError.serverError(
+                statusCode: 200,
+                message: json["message"] as? String
+            )
+        }
+        return json["data"] as? String ?? UUID().uuidString
     }
 
     static func deleteExpense(groupId: String, expenseId: String) async throws {

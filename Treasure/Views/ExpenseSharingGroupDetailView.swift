@@ -1,4 +1,6 @@
 import SwiftUI
+import UIKit
+import FirebaseAuth
 
 struct ExpenseSharingGroupDetailView: View {
     let groupId: String
@@ -9,6 +11,7 @@ struct ExpenseSharingGroupDetailView: View {
     @State private var group: SharingGroup?
     @State private var report: SharingReportData?
     @State private var expenses: [SharingExpense] = []
+    @State private var members: [SharingMember] = []
     @State private var isLoading = true
     @State private var showingAddExpense = false
     @State private var errorMessage: String?
@@ -38,40 +41,18 @@ struct ExpenseSharingGroupDetailView: View {
                         .foregroundColor(.secondary)
                 }
                 ForEach(expenses) { e in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text(formattedAmount(e.amount, fractionDigits: 2))
-                                .font(.headline)
-                            Spacer()
-                            Text(statusLabel(e.status))
-                                .font(.caption2.weight(.bold))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(statusColor(e.status).opacity(0.18))
-                                .foregroundColor(statusColor(e.status))
-                                .clipShape(Capsule())
+                    SharingExpenseRow(
+                        expense: e,
+                        spenderName: spenderName(e),
+                        isAdmin: isAdmin,
+                        isClosed: isClosed,
+                        onApprove: { Task { await approve(e) } },
+                        onReject: {
+                            rejectTarget = e
+                            showingReject = true
                         }
-                        Text([e.category, e.place, e.note].filter { !$0.isEmpty }.joined(separator: " · "))
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        if isAdmin && !isClosed && e.status.lowercased() == "pending" {
-                            HStack {
-                                Button(L10n.string("hint_approve")) {
-                                    Task { await approve(e) }
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .tint(.green)
-                                Button(L10n.string("hint_reject")) {
-                                    rejectTarget = e
-                                    showingReject = true
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(.red)
-                            }
-                            .padding(.top, 4)
-                        }
-                    }
-                    .padding(.vertical, 4)
+                    )
+                    .environmentObject(categoryVM)
                 }
             }
             if isAdmin && !isClosed {
@@ -113,16 +94,26 @@ struct ExpenseSharingGroupDetailView: View {
             }
         }
         .sheet(isPresented: $showingAddExpense) {
-            AddSharingExpenseSheet(groupId: groupId) {
+            AddSharingExpenseSheet(groupId: groupId, isAdmin: isAdmin) { expense in
+                SharingGroupCache.applyLocalNewExpense(groupId, expense: expense)
                 showingAddExpense = false
-                Task { await load() }
+                if let cached = SharingGroupCache.peek(groupId) {
+                    apply(cached)
+                } else {
+                    expenses.insert(expense, at: 0)
+                }
+                isLoading = false
             }
             .environmentObject(categoryVM)
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
-        .refreshable { await load() }
-        .task { await load() }
+        .refreshable { await load(force: true) }
+        .task { await load(force: SharingGroupCache.peek(groupId) == nil) }
+        .onReceive(SharingDeepLinkStore.shared.$liveUpdateGroupId) { gid in
+            guard gid == groupId else { return }
+            Task { await load(force: true) }
+        }
         .alert(L10n.string("hint_reject"), isPresented: $showingReject) {
             TextField(L10n.string("hint_rejection_reason"), text: $rejectReason)
             Button(L10n.string("hint_cancel"), role: .cancel) {
@@ -137,46 +128,61 @@ struct ExpenseSharingGroupDetailView: View {
         }
     }
 
-    private func statusLabel(_ status: String) -> String {
-        switch status.lowercased() {
-        case "approved": return L10n.string("hint_sharing_approved_short")
-        case "rejected": return L10n.string("hint_sharing_rejected_short")
-        default: return L10n.string("hint_sharing_pending_short")
+    private func spenderName(_ expense: SharingExpense) -> String {
+        if let name = expense.createdByName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+            return name
         }
+        if let member = members.first(where: { $0.userId == expense.createdByUid }) {
+            return member.displayName
+        }
+        return L10n.string("hint_member_role")
     }
 
-    private func statusColor(_ status: String) -> Color {
-        switch status {
-        case "approved": return .green
-        case "rejected": return .red
-        default: return .orange
+    private func load(force: Bool = true) async {
+        if let cached = SharingGroupCache.peek(groupId) {
+            apply(cached)
+            isLoading = false
+            if !force { return }
+        } else {
+            isLoading = true
         }
-    }
-
-    private func load() async {
-        isLoading = true
         defer { isLoading = false }
         do {
-            let detail = try await SharingApi.fetchDetail(groupId: groupId)
-            group = detail.group
-            report = detail.report
-            if let rows = detail.expenses {
-                expenses = rows
-            } else {
-                expenses = (try? await SharingApi.listExpenses(groupId: groupId)) ?? []
-            }
+            let detail = try await SharingGroupCache.load(groupId, force: force)
+            apply(detail)
         } catch {
-            group = nil
-            report = nil
-            expenses = []
-            errorMessage = error.localizedDescription
+            if SharingGroupCache.peek(groupId) == nil {
+                group = nil
+                report = nil
+                members = []
+                expenses = []
+                errorMessage = error.localizedDescription
+            }
         }
+    }
+
+    private func applyLocalCache() {
+        if let cached = SharingGroupCache.peek(groupId) {
+            apply(cached)
+            isLoading = false
+        }
+    }
+
+    private func apply(_ detail: SharingGroupDetailData) {
+        group = detail.group
+        report = detail.report
+        members = detail.members
+        if let rows = detail.expenses {
+            expenses = rows
+        }
+        errorMessage = nil
     }
 
     private func closeGroup() async {
         do {
             try await SharingApi.closeGroup(groupId: groupId)
-            await load()
+            SharingGroupCache.invalidate(groupId)
+            await load(force: true)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -185,6 +191,7 @@ struct ExpenseSharingGroupDetailView: View {
     private func deleteGroup() async {
         do {
             try await SharingApi.deleteGroup(groupId: groupId)
+            SharingGroupCache.invalidate(groupId)
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
@@ -194,7 +201,8 @@ struct ExpenseSharingGroupDetailView: View {
     private func approve(_ expense: SharingExpense) async {
         do {
             try await SharingApi.approveExpense(groupId: groupId, expenseId: expense.id)
-            await load()
+            SharingGroupCache.applyLocalExpenseStatus(groupId, expenseId: expense.id, status: "approved")
+            applyLocalCache()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -203,18 +211,110 @@ struct ExpenseSharingGroupDetailView: View {
     private func reject(_ expense: SharingExpense, reason: String) async {
         do {
             try await SharingApi.rejectExpense(groupId: groupId, expenseId: expense.id, reason: reason)
+            SharingGroupCache.applyLocalExpenseStatus(
+                groupId,
+                expenseId: expense.id,
+                status: "rejected",
+                reason: reason
+            )
             rejectTarget = nil
             rejectReason = ""
-            await load()
+            applyLocalCache()
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 }
 
+private struct SharingExpenseRow: View {
+    let expense: SharingExpense
+    let spenderName: String
+    let isAdmin: Bool
+    let isClosed: Bool
+    var onApprove: () -> Void
+    var onReject: () -> Void
+
+    @EnvironmentObject private var categoryVM: CategoryViewModel
+    @ObservedObject private var currencyStore = CurrencyStore.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 12) {
+                CategoryImageView(
+                    imageUrl: categoryVM.getCategoryImage(for: expense.category),
+                    size: 44,
+                    name: expense.category
+                )
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(expense.category.isEmpty ? "General" : expense.category)
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                        Spacer(minLength: 8)
+                        Text(formattedAmount(expense.amount, fractionDigits: 2))
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                    }
+                    HStack(alignment: .center, spacing: 8) {
+                        Text(String(format: L10n.string("hint_spent_by"), spenderName))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                        Spacer(minLength: 4)
+                        Text(statusLabel)
+                            .font(.caption2.weight(.bold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(statusColor.opacity(0.18))
+                            .foregroundColor(statusColor)
+                            .clipShape(Capsule())
+                    }
+                    let meta = [expense.place, expense.note].filter { !$0.isEmpty }.joined(separator: " · ")
+                    if !meta.isEmpty {
+                        Text(meta)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                    }
+                }
+            }
+            if isAdmin && !isClosed && expense.status.lowercased() == "pending" {
+                HStack {
+                    Button(L10n.string("hint_approve"), action: onApprove)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.green)
+                    Button(L10n.string("hint_reject"), action: onReject)
+                        .buttonStyle(.bordered)
+                        .tint(.red)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+        .id(currencyStore.code)
+    }
+
+    private var statusLabel: String {
+        switch expense.status.lowercased() {
+        case "approved": return L10n.string("hint_sharing_approved_short")
+        case "rejected": return L10n.string("hint_sharing_rejected_short")
+        default: return L10n.string("hint_sharing_pending_short")
+        }
+    }
+
+    private var statusColor: Color {
+        switch expense.status.lowercased() {
+        case "approved": return .green
+        case "rejected": return .red
+        default: return Color.accentColor
+        }
+    }
+}
+
 private struct AddSharingExpenseSheet: View {
     let groupId: String
-    var onSaved: () -> Void
+    var isAdmin: Bool = false
+    var onSaved: (SharingExpense) -> Void
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var categoryVM: CategoryViewModel
     @State private var amount = ""
@@ -255,10 +355,13 @@ private struct AddSharingExpenseSheet: View {
                 }
                 TextField("Where (optional)", text: $place)
                 TextField("Note (optional)", text: $note)
+                    .textInputAutocapitalization(.sentences)
+                    .submitLabel(.done)
                 if let error {
                     Text(error).foregroundColor(.red).font(.footnote)
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Add expense")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -291,17 +394,33 @@ private struct AddSharingExpenseSheet: View {
 
     private func save() async {
         guard let value = Double(amount) else { return }
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         saving = true
         defer { saving = false }
         do {
-            try await SharingApi.addExpense(
+            let expenseId = try await SharingApi.addExpense(
                 groupId: groupId,
                 amount: value,
                 category: selectedCategory?.name ?? "General",
                 place: place,
                 note: note
             )
-            onSaved()
+            let iso = ISO8601DateFormatter().string(from: Date())
+            let name = Auth.auth().currentUser?.displayName
+            let expense = SharingExpense(
+                id: expenseId,
+                amount: value,
+                category: selectedCategory?.name ?? "General",
+                place: place,
+                note: note,
+                spentAt: iso,
+                createdByUid: Auth.auth().currentUser?.uid ?? "",
+                createdByName: name,
+                status: isAdmin ? "approved" : "pending",
+                rejectionReason: nil
+            )
+            onSaved(expense)
+            dismiss()
         } catch {
             self.error = error.localizedDescription
         }

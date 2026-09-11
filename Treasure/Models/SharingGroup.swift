@@ -50,6 +50,7 @@ struct SharingExpense: Identifiable, Decodable {
     let note: String
     let spentAt: String?
     let createdByUid: String
+    let createdByName: String?
     let status: String
     let rejectionReason: String?
 }

@@ -1067,6 +1067,16 @@
         }
       }
     },
+    "hint_admin_named_short": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Admin · %1$@"
+          }
+        }
+      }
+    },
     "hint_administrator_named": {
       "localizations": {
         "en": {
@@ -1719,6 +1729,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "تعذر الحصول على رمز المصادقة"
+          }
+        }
+      }
+    },
+    "hint_balance": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Balance"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "शेष राशि"
+          }
+        },
+        "bn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ব্যালেন্স"
+          }
+        },
+        "te": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "బ్యాలెన్స్"
+          }
+        },
+        "mr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "शिल्लक"
+          }
+        },
+        "ta": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "இருப்பு"
+          }
+        },
+        "gu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "બેલેન્સ"
+          }
+        },
+        "kn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ಬಾಕಿ"
+          }
+        },
+        "ml": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ബാലൻസ്"
+          }
+        },
+        "pa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ਬਕਾਇਆ"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solde"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saldo"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الرصيد"
           }
         }
       }
@@ -14941,6 +15033,88 @@
         }
       }
     },
+    "hint_previous_month_saving": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous Month Saving"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पिछले महीने की बचत"
+          }
+        },
+        "bn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "আগের মাসের সঞ্চয়"
+          }
+        },
+        "te": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "గత నెల పొదుపు"
+          }
+        },
+        "mr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मागील महिन्याची बचत"
+          }
+        },
+        "ta": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "கடந்த மாத சேமிப்பு"
+          }
+        },
+        "gu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "પાછલા મહિનાની બચત"
+          }
+        },
+        "kn": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ಹಿಂದಿನ ತಿಂಗಳ ಉಳಿತಾಯ"
+          }
+        },
+        "ml": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "കഴിഞ്ഞ മാസത്തെ ലാഭം"
+          }
+        },
+        "pa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ਪਿਛਲੇ ਮਹੀਨੇ ਦੀ ਬਚਤ"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Épargne du mois précédent"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ahorro del mes anterior"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "توفير الشهر السابق"
+          }
+        }
+      }
+    },
     "hint_privacy_policy": {
       "localizations": {
         "en": {
@@ -16857,6 +17031,16 @@
         }
       }
     },
+    "hint_saved_syncing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved, syncing…"
+          }
+        }
+      }
+    },
     "hint_search_category": {
       "localizations": {
         "en": {
@@ -18542,7 +18726,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Spent by: %1$@"
+            "value": "Spent by %1$@"
           }
         },
         "hi": {

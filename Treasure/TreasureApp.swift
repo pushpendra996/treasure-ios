@@ -57,7 +57,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             completionHandler(.noData)
             return
         }
-        SharingDeepLinkStore.shared.capture(notification)
+        SharingDeepLinkStore.shared.notifyLiveUpdate(notification)
         completionHandler(.noData)
     }
 
@@ -74,6 +74,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             completionHandler([])
             return
         }
+        SharingDeepLinkStore.shared.notifyLiveUpdate(notification.request.content.userInfo)
         completionHandler([.banner, .sound])
     }
 

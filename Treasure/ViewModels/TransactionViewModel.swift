@@ -10,6 +10,7 @@ class TransactionViewModel: ObservableObject {
     @Published var hasMore = false
     @Published var monthIncome: Double = 0
     @Published var monthExpenses: Double = 0
+    @Published var previousMonthSaving: Double = 0
 
     private let db = Firestore.firestore()
     private var lastDocument: DocumentSnapshot?
@@ -237,6 +238,18 @@ class TransactionViewModel: ObservableObject {
     }
 
     private func fetchMonthWallet(userId: String, date: Date) async {
+        let previousDate = Calendar.current.date(byAdding: .month, value: -1, to: date) ?? date
+        async let current = walletTotals(userId: userId, date: date)
+        async let previous = walletTotals(userId: userId, date: previousDate)
+        let (currentTotals, previousTotals) = await (current, previous)
+        await MainActor.run {
+            self.monthIncome = currentTotals.income
+            self.monthExpenses = currentTotals.expenses
+            self.previousMonthSaving = previousTotals.income - previousTotals.expenses
+        }
+    }
+
+    private func walletTotals(userId: String, date: Date) async -> (income: Double, expenses: Double) {
         let year = Calendar.current.component(.year, from: date)
         let month = String(format: "%02d", Calendar.current.component(.month, from: date))
         let walletRef = db.collection("wallet")
@@ -245,12 +258,7 @@ class TransactionViewModel: ObservableObject {
             .document(month)
         let snap = try? await walletRef.getDocumentAvailable()
         let data = snap?.data() ?? [:]
-        let income = numberValue(data["income"])
-        let expenses = numberValue(data["expenses"])
-        await MainActor.run {
-            self.monthIncome = income
-            self.monthExpenses = expenses
-        }
+        return (numberValue(data["income"]), numberValue(data["expenses"]))
     }
 
     private func numberValue(_ value: Any?) -> Double {
